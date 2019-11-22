@@ -189,8 +189,7 @@ namespace Convention_Registration_Simulation
 
             for (int registrantID = 1; registrantID <= NumRegistrants; registrantID++)
             {
-                Registrant person = new Registrant();
-                person.ID = registrantID;
+                Registrant person = new Registrant(registrantID, new TimeSpan(0, 0, (int)start.TotalSeconds));
 
                 // Random start time based on the number of minutes in the hours we are open.
                 start = new TimeSpan(0, 0, r.Next((int)(NumHoursOpen * 60 * 60)));
@@ -206,7 +205,6 @@ namespace Convention_Registration_Simulation
                     longest = interval;
 
                 // Enqueue the arrival event for this person.
-                person.Arrival = new TimeSpan(0, 0, (int) start.TotalSeconds);
                 PQ.Enqueue(new Event(EVENTTYPE.ENTER, timeWeOpen.Add(start), person));
 
                 // Enqueue the departure event for this person.
@@ -233,6 +231,10 @@ namespace Convention_Registration_Simulation
         /// </summary>
         public static void DoSimulation()
         {
+            TimeSpan minInterval = new TimeSpan(0, 0, 0);
+            TimeSpan maxInterval = new TimeSpan(0, 0, 0);
+            TimeSpan avgInterval = new TimeSpan(0, 0, 0);
+
             maxPresent = 0;
             int current = 0;
             Queue<Registrant> shortestQueue;
@@ -252,6 +254,8 @@ namespace Convention_Registration_Simulation
                         PQ.Peek().registrant.Interval = TimeSpan.FromSeconds(interval);
                         PQ.Peek().registrant.Departure = PQ.Peek().registrant.Arrival + TimeSpan.FromSeconds(interval);
                     }
+                    shortestQueue.Enqueue(PQ.Peek().registrant);
+                    PQ.Dequeue();
                     current++;
                     arrivals++;
                     if (current > maxPresent)
@@ -261,8 +265,36 @@ namespace Convention_Registration_Simulation
                 }
                 else
                 {
-                    current--;
-                    departures++;
+                    for(int i=0; i < NumWindows; i++)
+                    {
+                        if (ListOfRegistrationLines[i].Count > 0 && PQ.Peek().registrant.ID == ListOfRegistrationLines[i].Peek().ID)
+                        {
+                            TimeSpan previousRegistrant = ListOfRegistrationLines[i].Peek().Departure;
+                            ListOfRegistrationLines[i].Dequeue();
+                            current--;
+                            departures++;
+
+                            if(ListOfRegistrationLines[i].Count > 0)
+                            {
+                                double interval = (1.5 * 60) + NegExp(ExpectedDuration * 60) - (1.5 * 60);  // 1.5 = minimum checkout time.
+                                PQ.Peek().registrant.Interval = TimeSpan.FromSeconds(interval);
+                                PQ.Peek().registrant.Departure = PQ.Peek().registrant.Arrival + TimeSpan.FromSeconds(interval);
+
+                                if (ListOfRegistrationLines[i].Peek().Interval < minInterval || minInterval == new TimeSpan(0, 0, 0))
+                                {
+                                    minInterval = ListOfRegistrationLines[i].Peek().Interval;
+                                }
+                                if(ListOfRegistrationLines[i].Peek().Interval > maxInterval)
+                                {
+                                    maxInterval = ListOfRegistrationLines[i].Peek().Interval;
+                                }
+
+                                avgInterval = avgInterval.Add(ListOfRegistrationLines[i].Peek().Interval);
+                                ListOfRegistrationLines[i].Peek().Departure = ListOfRegistrationLines[i].Peek().Interval + previousRegistrant;
+                                PQ.Enqueue(new Event(EVENTTYPE.LEAVE, timeWeOpen.Add(ListOfRegistrationLines[i].Peek().Departure), ListOfRegistrationLines[i].Peek()));
+                            }
+                        }
+                    }
                 }
 
                 PQ.Dequeue();       // Remove top event.
