@@ -207,9 +207,10 @@ namespace Convention_Registration_Simulation
                 // Enqueue the arrival event for this person.
                 PQ.Enqueue(new Event(EVENTTYPE.ENTER, timeWeOpen.Add(start), person));
 
-                // Enqueue the departure event for this person.
+                /* Enqueue the departure event for this person.
                 person.Departure = new TimeSpan(0, 0, (int) (start.TotalSeconds + interval.TotalSeconds));
                 PQ.Enqueue(new Event(EVENTTYPE.LEAVE, timeWeOpen.Add(start + interval), person));
+                */
             }
         }
 
@@ -231,10 +232,6 @@ namespace Convention_Registration_Simulation
         /// </summary>
         public static void DoSimulation()
         {
-            TimeSpan minInterval = new TimeSpan(0, 0, 0);
-            TimeSpan maxInterval = new TimeSpan(0, 0, 0);
-            TimeSpan avgInterval = new TimeSpan(0, 0, 0);
-
             maxPresent = 0;
             int current = 0;
             Queue<Registrant> shortestQueue;
@@ -280,16 +277,16 @@ namespace Convention_Registration_Simulation
                                 PQ.Peek().registrant.Interval = TimeSpan.FromSeconds(interval);
                                 PQ.Peek().registrant.Departure = PQ.Peek().registrant.Arrival + TimeSpan.FromSeconds(interval);
 
-                                if (ListOfRegistrationLines[i].Peek().Interval < minInterval || minInterval == new TimeSpan(0, 0, 0))
+                                if (ListOfRegistrationLines[i].Peek().Interval < shortest || shortest == null)
                                 {
-                                    minInterval = ListOfRegistrationLines[i].Peek().Interval;
+                                    shortest = ListOfRegistrationLines[i].Peek().Interval;
                                 }
-                                if(ListOfRegistrationLines[i].Peek().Interval > maxInterval)
+                                if(ListOfRegistrationLines[i].Peek().Interval > longest)
                                 {
-                                    maxInterval = ListOfRegistrationLines[i].Peek().Interval;
+                                    longest = ListOfRegistrationLines[i].Peek().Interval;
                                 }
 
-                                avgInterval = avgInterval.Add(ListOfRegistrationLines[i].Peek().Interval);
+                                totalTime = totalTime.Add(ListOfRegistrationLines[i].Peek().Interval);
                                 ListOfRegistrationLines[i].Peek().Departure = ListOfRegistrationLines[i].Peek().Interval + previousRegistrant;
                                 PQ.Enqueue(new Event(EVENTTYPE.LEAVE, timeWeOpen.Add(ListOfRegistrationLines[i].Peek().Departure), ListOfRegistrationLines[i].Peek()));
                             }
@@ -342,12 +339,12 @@ namespace Convention_Registration_Simulation
         /// <returns></returns>
         private static Queue<Registrant> CurrentShortestLine()
         {
-            int shortest = ListOfRegistrationLines[0].Count;
+            int shortest = 0;
 
             for(int i=1; i < ListOfRegistrationLines.Count; i++)
             {
-                if (ListOfRegistrationLines[i].Count < shortest)
-                    shortest = ListOfRegistrationLines[i].Count;
+                if (ListOfRegistrationLines[i].Count < ListOfRegistrationLines[shortest].Count)
+                    shortest = i;
             }
 
             return ListOfRegistrationLines[shortest];
