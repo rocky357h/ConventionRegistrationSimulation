@@ -194,7 +194,7 @@ namespace Convention_Registration_Simulation
                 // Random start time based on the number of minutes in the hours we are open.
                 start = new TimeSpan(0, 0, r.Next((int)(NumHoursOpen * 60 * 60)));
 
-                // Random (neg. exp.) interval with a minimum of 1.5 minutes; expected time = 4.5 minutes
+                /* Random (neg. exp.) interval with a minimum of 1.5 minutes; expected time = 4.5 minutes
                 interval = new TimeSpan(0, 0, (int)((1.5 + NegExp(3.0)) * 60));
                 totalTime += interval;
 
@@ -203,6 +203,7 @@ namespace Convention_Registration_Simulation
 
                 if (longest < interval)       // Remember the longest stay
                     longest = interval;
+                */
 
                 // Enqueue the arrival event for this person.
                 PQ.Enqueue(new Event(EVENTTYPE.ENTER, timeWeOpen.Add(start), person));
@@ -233,7 +234,6 @@ namespace Convention_Registration_Simulation
         public static void DoSimulation()
         {
             maxPresent = 0;
-            int current = 0;
             Queue<Registrant> shortestQueue;
 
             DrawHeading();
@@ -250,14 +250,14 @@ namespace Convention_Registration_Simulation
                         double interval = (1.5 * 60) + NegExp(ExpectedDuration * 60) - (1.5 * 60);  // 1.5 = minimum checkout time.
                         PQ.Peek().registrant.Interval = TimeSpan.FromSeconds(interval);
                         PQ.Peek().registrant.Departure = PQ.Peek().registrant.Arrival + TimeSpan.FromSeconds(interval);
+
                     }
                     shortestQueue.Enqueue(PQ.Peek().registrant);
                     PQ.Dequeue();
-                    current++;
                     arrivals++;
-                    if (current > maxPresent)
+                    if (LengthOfCurrentLongestLine() > maxPresent)
                     {
-                        maxPresent = current;
+                        maxPresent = LengthOfCurrentLongestLine();
                     }
                 }
                 else
@@ -268,7 +268,6 @@ namespace Convention_Registration_Simulation
                         {
                             TimeSpan previousRegistrant = ListOfRegistrationLines[i].Peek().Departure;
                             ListOfRegistrationLines[i].Dequeue();
-                            current--;
                             departures++;
 
                             if(ListOfRegistrationLines[i].Count > 0)
@@ -277,7 +276,7 @@ namespace Convention_Registration_Simulation
                                 PQ.Peek().registrant.Interval = TimeSpan.FromSeconds(interval);
                                 PQ.Peek().registrant.Departure = PQ.Peek().registrant.Arrival + TimeSpan.FromSeconds(interval);
 
-                                if (ListOfRegistrationLines[i].Peek().Interval < shortest || shortest == null)
+                                if (ListOfRegistrationLines[i].Peek().Interval < shortest || shortest == new TimeSpan(0, 0, 0))
                                 {
                                     shortest = ListOfRegistrationLines[i].Peek().Interval;
                                 }
@@ -292,9 +291,9 @@ namespace Convention_Registration_Simulation
                             }
                         }
                     }
+                    PQ.Dequeue();       // Remove top event.
                 }
 
-                PQ.Dequeue();       // Remove top event.
                 Thread.Sleep(100);  // Pause for a moment.
             }
         }
